@@ -18,10 +18,7 @@ continent <- read_csv("continents-according-to-our-world-in-data.csv")
 
 # Load the additional datasets
 edu_raw <- read_csv("government_expenditure_on_education.csv", skip = 4)
-
-# Load SDI Score Data (Socio-demographic Index)
-# Source: Global Burden of Disease Study
-sdi_raw <- read_csv("SDI+and+Components+(1990-2022).csv")
+sdi_raw <- read_csv("sustainable_development_index.csv")
 
 cat("\n=== Data loaded successfully ===\n")
 cat("GDP data:", nrow(gdp), "rows\n")
@@ -241,3 +238,4 @@ master_data %>%
   print()
 # End of Data Cleaning and Merging Code
 # ============================================================================
+
