@@ -225,7 +225,6 @@ cat("  ✓ Saved: figure4_covid_impact.png\n\n")
 # ----------------------------------------------------------------------------
 # FIGURE 5: SDI vs GDP GROWTH
 # ----------------------------------------------------------------------------
-
 cat("Creating Figure 5: SDI vs GDP Growth...\n")
 
 sdi_growth <- analysis_period %>%
@@ -241,7 +240,7 @@ fig5 <- ggplot(sdi_growth, aes(x = sdi_score, y = gdp_growth_rate,
   labs(
     title = "Figure 5: Sustainable Development vs Economic Growth",
     subtitle = "SDI Score vs GDP Growth Rate (2015-2023) | Red line: 7% target",
-    x = "Sustainable Development Index (Higher = More Sustainable)", 
+    x = "Sustainable Development Index (Higher = More Sustainable)",
     y = "GDP Growth Rate (%)",
     color = "Country Group"
   ) +
@@ -249,9 +248,13 @@ fig5 <- ggplot(sdi_growth, aes(x = sdi_score, y = gdp_growth_rate,
   theme_minimal() +
   theme(plot.title = element_text(face = "bold", size = 14),
         plot.subtitle = element_text(size = 10),
-        legend.position = "bottom", strip.text = element_text(face = "bold"))
+        legend.position = "bottom", strip.text = element_text(face = "bold")) +
+  coord_cartesian(ylim = c(-10, 10))  
 
 ggsave("figure5_sdi_vs_growth.png", fig5, width = 14, height = 10, dpi = 300)
 cat("  ✓ Saved: figure5_sdi_vs_growth.png\n\n")
+
+cat("  ✓ Saved: figure5_sdi_vs_growth.png\n\n")
+
 
 
