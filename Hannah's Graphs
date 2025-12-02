@@ -1,0 +1,545 @@
+# ============================================================================
+# Box Plot: NEET Distribution by Continent
+# ============================================================================
+
+library(tidyverse)
+library(ggplot2)
+
+# Load the master dataset (assuming you've already run the cleaning script)
+master_data <- read_csv("master_dataset.csv")
+
+# Prepare data for box plot - remove missing NEET values
+neet_continent_data <- master_data %>%
+  filter(!is.na(neet_share), !is.na(continent))
+
+# Create the box plot
+ggplot(neet_continent_data, aes(x = continent, y = neet_share, fill = continent)) +
+  geom_boxplot(outlier.shape = 16, outlier.size = 2, alpha = 0.7) +
+  
+  # Customize colors to match the reference style
+  scale_fill_manual(values = c(
+    "Africa" = "#D55E00",
+    "Asia" = "#E6AB02", 
+    "Europe" = "#009E73",
+    "North America" = "#56B4E9",
+    "Oceania" = "#0072B2",
+    "South America" = "#CC79A7"
+  )) +
+  
+  # Labels and theme
+  labs(
+    title = "Box Plot: NEET Distribution by Continent",
+    x = "Continent",
+    y = "Share of Youth Not in Education,\nEmployment or Training (%)",
+    fill = "continent"
+  ) +
+  
+  # Clean theme matching the reference style
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    axis.title.x = element_text(size = 12, face = "bold"),
+    axis.title.y = element_text(size = 12, face = "bold"),
+    axis.text = element_text(size = 10),
+    legend.position = "bottom",
+    legend.title = element_text(size = 10, face = "bold"),
+    legend.text = element_text(size = 9),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(color = "black", fill = NA, linewidth = 0.5)
+  ) +
+  
+  # Arrange legend items horizontally
+  guides(fill = guide_legend(nrow = 1))
+
+# Save the plot
+ggsave("neet_boxplot_by_continent.png", width = 10, height = 7, dpi = 300)
+
+# Print summary statistics
+cat("\n=== NEET Distribution Summary by Continent ===\n\n")
+neet_summary <- neet_continent_data %>%
+  group_by(continent) %>%
+  summarise(
+    n_observations = n(),
+    n_countries = n_distinct(code),
+    min_neet = round(min(neet_share, na.rm = TRUE), 2),
+    q1_neet = round(quantile(neet_share, 0.25, na.rm = TRUE), 2),
+    median_neet = round(median(neet_share, na.rm = TRUE), 2),
+    q3_neet = round(quantile(neet_share, 0.75, na.rm = TRUE), 2),
+    max_neet = round(max(neet_share, na.rm = TRUE), 2),
+    mean_neet = round(mean(neet_share, na.rm = TRUE), 2),
+    .groups = "drop"
+  )
+
+print(neet_summary)
+
+
+
+
+# ============================================================================
+# NEET Trends Over Time by Continent
+# ============================================================================
+
+library(tidyverse)
+library(ggplot2)
+
+# Load the master dataset
+master_data <- read_csv("master_dataset.csv")
+
+# Prepare data: calculate mean NEET by continent and year
+neet_time_data <- master_data %>%
+  filter(!is.na(neet_share), !is.na(continent)) %>%
+  group_by(continent, year) %>%
+  summarise(
+    mean_neet = mean(neet_share, na.rm = TRUE),
+    median_neet = median(neet_share, na.rm = TRUE),
+    n_countries = n_distinct(code),
+    .groups = "drop"
+  )
+
+# Create line plot with confidence ribbons
+ggplot(neet_time_data, aes(x = year, y = mean_neet, color = continent, group = continent)) +
+  geom_line(linewidth = 1.2, alpha = 0.9) +
+  geom_point(size = 2.5, alpha = 0.7) +
+  
+  # Add a smooth trend line for each continent
+  geom_smooth(aes(fill = continent), method = "loess", se = TRUE, 
+              alpha = 0.15, linewidth = 0.5, linetype = "dashed") +
+  
+  # Color scheme matching previous plot
+  scale_color_manual(values = c(
+    "Africa" = "#D55E00",
+    "Asia" = "#E6AB02", 
+    "Europe" = "#009E73",
+    "North America" = "#56B4E9",
+    "Oceania" = "#0072B2",
+    "South America" = "#CC79A7"
+  )) +
+  scale_fill_manual(values = c(
+    "Africa" = "#D55E00",
+    "Asia" = "#E6AB02", 
+    "Europe" = "#009E73",
+    "North America" = "#56B4E9",
+    "Oceania" = "#0072B2",
+    "South America" = "#CC79A7"
+  )) +
+  
+  # Labels
+  labs(
+    title = "NEET Trends Over Time by Continent",
+    subtitle = "Average share of youth not in education, employment, or training",
+    x = "Year",
+    y = "Average NEET Share (%)",
+    color = "Continent",
+    fill = "Continent"
+  ) +
+  
+  # Clean theme
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 11, color = "gray40"),
+    axis.title = element_text(size = 12, face = "bold"),
+    axis.text = element_text(size = 10),
+    legend.position = "bottom",
+    legend.title = element_text(size = 11, face = "bold"),
+    legend.text = element_text(size = 10),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(color = "black", fill = NA, linewidth = 0.5)
+  ) +
+  guides(color = guide_legend(nrow = 1), fill = guide_legend(nrow = 1))
+
+# Save the plot
+ggsave("neet_trends_over_time.png", width = 12, height = 7, dpi = 300)
+
+cat("\n=== NEET Trends Over Time Created ===\n")
+cat("✓ Saved: neet_trends_over_time.png\n\n")
+
+# ============================================================================
+# BONUS: Create a faceted plot for detailed view by continent
+# ============================================================================
+
+# Prepare individual country data
+neet_country_time <- master_data %>%
+  filter(!is.na(neet_share), !is.na(continent))
+
+# Create faceted plot
+facet_plot <- ggplot(neet_country_time, aes(x = year, y = neet_share, group = code)) +
+  geom_line(alpha = 0.3, color = "gray60", linewidth = 0.5) +
+  geom_smooth(aes(group = continent, color = continent), 
+              method = "loess", se = TRUE, linewidth = 1.5, alpha = 0.2) +
+  
+  facet_wrap(~continent, ncol = 3, scales = "free_y") +
+  
+  scale_color_manual(values = c(
+    "Africa" = "#D55E00",
+    "Asia" = "#E6AB02", 
+    "Europe" = "#009E73",
+    "North America" = "#56B4E9",
+    "Oceania" = "#0072B2",
+    "South America" = "#CC79A7"
+  )) +
+  
+  labs(
+    title = "NEET Trends: Individual Countries and Continental Averages",
+    subtitle = "Gray lines show individual countries, colored line shows continental trend",
+    x = "Year",
+    y = "NEET Share (%)",
+    color = "Continent"
+  ) +
+  
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 15, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 10, color = "gray40"),
+    axis.title = element_text(size = 11, face = "bold"),
+    axis.text = element_text(size = 8),
+    strip.text = element_text(size = 11, face = "bold"),
+    strip.background = element_rect(fill = "gray90", color = "black"),
+    legend.position = "none",
+    panel.border = element_rect(color = "black", fill = NA, linewidth = 0.5)
+  )
+
+ggsave("neet_trends_faceted.png", width = 14, height = 9, dpi = 300)
+
+cat("✓ Saved: neet_trends_faceted.png\n\n")
+
+# ============================================================================
+# Print summary statistics
+# ============================================================================
+
+cat("=== NEET Change Over Time Summary ===\n\n")
+
+# Calculate first and last year averages by continent
+time_summary <- neet_time_data %>%
+  group_by(continent) %>%
+  arrange(year) %>%
+  filter(year == min(year) | year == max(year)) %>%
+  summarise(
+    year_range = paste(min(year), "-", max(year)),
+    initial_neet = first(mean_neet),
+    final_neet = last(mean_neet),
+    absolute_change = final_neet - initial_neet,
+    percent_change = round((final_neet - initial_neet) / initial_neet * 100, 1),
+    .groups = "drop"
+  )
+
+print(time_summary)
+
+cat("\n✓ All visualizations created successfully!\n")
+
+cat("\n✓ Box plot saved as: neet_boxplot_by_continent.png\n")
+
+
+
+# ============================================================================
+# NEET vs Education Spending - Interactive Visualization
+# ============================================================================
+
+library(tidyverse)
+library(ggplot2)
+library(ggrepel)  # For better label placement
+
+# Load the master dataset
+master_data <- read_csv("master_dataset.csv")
+
+# Prepare data: filter for complete cases
+neet_edu_data <- master_data %>%
+  filter(!is.na(neet_share), !is.na(edu_expenditure_gdp), !is.na(continent)) %>%
+  # Get most recent year for each country to avoid overplotting
+  group_by(code) %>%
+  arrange(desc(year)) %>%
+  slice(1) %>%
+  ungroup()
+
+# Identify interesting countries to label (extremes and notable cases)
+countries_to_label <- neet_edu_data %>%
+  group_by(continent) %>%
+  arrange(desc(neet_share)) %>%
+  slice(1:2) %>%  # Top 2 highest NEET per continent
+  ungroup() %>%
+  bind_rows(
+    neet_edu_data %>%
+      filter(edu_expenditure_gdp > 6 | neet_share > 25)  # High spenders or high NEET
+  ) %>%
+  distinct(code, .keep_all = TRUE)
+
+# ============================================================================
+# MAIN PLOT: Scatter with size and transparency
+# ============================================================================
+
+main_plot <- ggplot(neet_edu_data, aes(x = edu_expenditure_gdp, y = neet_share)) +
+  
+  # Add a subtle regression line
+  geom_smooth(method = "lm", se = TRUE, color = "gray30", 
+              fill = "gray70", alpha = 0.2, linewidth = 1) +
+  
+  # Main scatter points with size based on GDP
+  geom_point(aes(color = continent, size = gdp_per_capita), 
+             alpha = 0.6, stroke = 0.5) +
+  
+  # Add labels for notable countries
+  geom_text_repel(data = countries_to_label,
+                  aes(label = country, color = continent),
+                  size = 3,
+                  fontface = "bold",
+                  max.overlaps = 20,
+                  box.padding = 0.5,
+                  point.padding = 0.3,
+                  segment.color = "gray50",
+                  segment.size = 0.3) +
+  
+  # Color scheme
+  scale_color_manual(values = c(
+    "Africa" = "#D55E00",
+    "Asia" = "#E6AB02", 
+    "Europe" = "#009E73",
+    "North America" = "#56B4E9",
+    "Oceania" = "#0072B2",
+    "South America" = "#CC79A7"
+  )) +
+  
+  # Size scale for GDP
+  scale_size_continuous(range = c(2, 12), 
+                        labels = scales::comma,
+                        name = "GDP per Capita ($)") +
+  
+  # Labels
+  labs(
+    title = "NEET Rates vs Government Education Spending",
+    subtitle = "Point size represents GDP per capita | Most recent year data for each country",
+    x = "Government Expenditure on Education (% of GDP)",
+    y = "Youth Not in Education, Employment or Training (%)",
+    color = "Continent",
+    caption = "Data: World Bank & Our World in Data"
+  ) +
+  
+  # Theme
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 10, color = "gray40"),
+    plot.caption = element_text(size = 8, color = "gray50"),
+    axis.title = element_text(size = 12, face = "bold"),
+    axis.text = element_text(size = 10),
+    legend.position = "right",
+    legend.title = element_text(size = 10, face = "bold"),
+    legend.text = element_text(size = 9),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(color = "black", fill = NA, linewidth = 0.5)
+  )
+
+ggsave("neet_vs_education_spending.png", main_plot, width = 14, height = 9, dpi = 300)
+cat("✓ Saved: neet_vs_education_spending.png\n\n")
+
+# ============================================================================
+# FACETED PLOT BY CONTINENT: Show regional patterns
+# ============================================================================
+
+faceted_plot <- ggplot(neet_edu_data, aes(x = edu_expenditure_gdp, y = neet_share)) +
+  
+  geom_smooth(method = "lm", se = TRUE, color = "gray40", 
+              fill = "gray70", alpha = 0.2, linewidth = 0.8) +
+  
+  geom_point(aes(color = continent, size = gdp_per_capita), 
+             alpha = 0.7, stroke = 0.5) +
+  
+  facet_wrap(~continent, ncol = 3, scales = "free") +
+  
+  scale_color_manual(values = c(
+    "Africa" = "#D55E00",
+    "Asia" = "#E6AB02", 
+    "Europe" = "#009E73",
+    "North America" = "#56B4E9",
+    "Oceania" = "#0072B2",
+    "South America" = "#CC79A7"
+  )) +
+  
+  scale_size_continuous(range = c(2, 8), 
+                        labels = scales::comma,
+                        name = "GDP per Capita") +
+  
+  labs(
+    title = "NEET vs Education Spending by Continent",
+    subtitle = "Each panel shows the relationship within a continent",
+    x = "Government Expenditure on Education (% of GDP)",
+    y = "NEET Share (%)",
+    color = "Continent"
+  ) +
+  
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 15, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 10, color = "gray40"),
+    axis.title = element_text(size = 11, face = "bold"),
+    axis.text = element_text(size = 8),
+    strip.text = element_text(size = 11, face = "bold"),
+    strip.background = element_rect(fill = "gray90", color = "black"),
+    legend.position = "bottom",
+    panel.border = element_rect(color = "black", fill = NA, linewidth = 0.5)
+  )
+
+ggsave("neet_vs_education_faceted.png", faceted_plot, width = 14, height = 10, dpi = 300)
+cat("✓ Saved: neet_vs_education_faceted.png\n\n")
+
+# ============================================================================
+# CALCULATE CORRELATION STATISTICS
+# ============================================================================
+
+cat("=== CORRELATION ANALYSIS ===\n\n")
+
+# Overall correlation
+overall_cor <- cor(neet_edu_data$edu_expenditure_gdp, 
+                   neet_edu_data$neet_share, 
+                   use = "complete.obs")
+cat("Overall Correlation:", round(overall_cor, 3), "\n\n")
+
+# Correlation by continent
+continent_cor <- neet_edu_data %>%
+  group_by(continent) %>%
+  summarise(
+    n_countries = n(),
+    correlation = round(cor(edu_expenditure_gdp, neet_share, 
+                            use = "complete.obs"), 3),
+    mean_edu_spending = round(mean(edu_expenditure_gdp, na.rm = TRUE), 2),
+    mean_neet = round(mean(neet_share, na.rm = TRUE), 2),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(abs(correlation)))
+
+print(continent_cor)
+
+# Linear regression summary
+cat("\n=== LINEAR REGRESSION MODEL ===\n")
+model <- lm(neet_share ~ edu_expenditure_gdp, data = neet_edu_data)
+print(summary(model))
+
+cat("\n✓ All visualizations created successfully!\n")
+cat("\nKEY INSIGHTS:\n")
+cat("- Point size = GDP per capita (bigger = wealthier)\n")
+cat("- Point color = Continent\n")
+cat("- Gray line = Overall trend\n")
+cat("- Labels = Notable high-NEET or high-spending countries\n")
+
+
+# ============================================================================
+# NEET vs GDP Growth Rate - Clean & Simple Visualization
+# ============================================================================
+
+library(tidyverse)
+library(ggplot2)
+
+# Load the master dataset
+master_data <- read_csv("master_dataset.csv")
+
+# ============================================================================
+# Calculate GDP Growth Rate
+# ============================================================================
+
+cat("=== Calculating GDP Growth Rates ===\n")
+
+# Calculate year-over-year GDP growth rate
+gdp_growth_data <- master_data %>%
+  filter(!is.na(gdp_per_capita)) %>%
+  arrange(code, year) %>%
+  group_by(code) %>%
+  mutate(
+    gdp_growth_rate = (gdp_per_capita - lag(gdp_per_capita)) / lag(gdp_per_capita) * 100
+  ) %>%
+  ungroup()
+
+# Combine with NEET data
+neet_gdp_growth <- gdp_growth_data %>%
+  filter(!is.na(neet_share), !is.na(gdp_growth_rate), !is.na(continent)) %>%
+  filter(gdp_growth_rate > -30, gdp_growth_rate < 30)  # Remove extreme outliers
+
+cat("Total observations:", nrow(neet_gdp_growth), "\n\n")
+
+# ============================================================================
+# Create Clean Scatter Plot
+# ============================================================================
+
+clean_plot <- ggplot(neet_gdp_growth, aes(x = gdp_growth_rate, y = neet_share)) +
+  
+  # Simple points by continent
+  geom_point(aes(color = continent), alpha = 0.6, size = 3) +
+  
+  # One clean trend line
+  geom_smooth(method = "lm", se = FALSE, color = "black", 
+              linewidth = 1.2, linetype = "solid") +
+  
+  # Color scheme
+  scale_color_manual(values = c(
+    "Africa" = "#D55E00",
+    "Asia" = "#E6AB02", 
+    "Europe" = "#009E73",
+    "North America" = "#56B4E9",
+    "Oceania" = "#0072B2",
+    "South America" = "#CC79A7"
+  )) +
+  
+  # Simple labels
+  labs(
+    title = "NEET Rates vs GDP Growth",
+    x = "GDP Growth Rate (%)",
+    y = "Youth Not in Education, Employment or Training (%)",
+    color = "Continent"
+  ) +
+  
+  # Clean theme
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+    axis.title = element_text(size = 12, face = "bold"),
+    axis.text = element_text(size = 11),
+    legend.position = "bottom",
+    legend.title = element_text(size = 11, face = "bold"),
+    legend.text = element_text(size = 10),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(color = "black", fill = NA, linewidth = 0.5)
+  ) +
+  guides(color = guide_legend(nrow = 1))
+
+ggsave("neet_vs_gdp_growth_simple.png", clean_plot, width = 12, height = 8, dpi = 300)
+cat("✓ Saved: neet_vs_gdp_growth_simple.png\n\n")
+
+# ============================================================================
+# Simple Statistics
+# ============================================================================
+
+cat("=== KEY FINDINGS ===\n\n")
+
+# Overall correlation
+overall_cor <- cor(neet_gdp_growth$gdp_growth_rate, 
+                   neet_gdp_growth$neet_share, 
+                   use = "complete.obs")
+cat("Correlation between GDP growth and NEET:", round(overall_cor, 3), "\n")
+
+if(overall_cor < -0.1) {
+  cat("→ Negative relationship: Higher growth = Lower NEET\n\n")
+} else if(overall_cor > 0.1) {
+  cat("→ Positive relationship: Higher growth = Higher NEET\n\n")
+} else {
+  cat("→ Weak/No clear relationship\n\n")
+}
+
+# Simple summary by economic condition
+cat("Average NEET by Economic Condition:\n")
+growth_summary <- neet_gdp_growth %>%
+  mutate(
+    condition = case_when(
+      gdp_growth_rate < 0 ~ "Negative Growth",
+      gdp_growth_rate < 3 ~ "Low Growth (0-3%)",
+      TRUE ~ "Strong Growth (>3%)"
+    )
+  ) %>%
+  group_by(condition) %>%
+  summarise(
+    observations = n(),
+    avg_neet = round(mean(neet_share), 1),
+    .groups = "drop"
+  )
+
+print(growth_summary)
+
+cat("\n✓ Clean visualization created!\n")
