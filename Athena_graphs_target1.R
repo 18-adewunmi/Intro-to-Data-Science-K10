@@ -185,42 +185,38 @@ ggsave("figure3_performers.png", fig3, width = 12, height = 10, dpi = 300)
 cat("  ✓ Saved: figure3_performers.png\n\n")
 
 # ----------------------------------------------------------------------------
-# FIGURE 4: COVID-19 IMPACT
+# ----------------------------------------------------------------------------
+# FIGURE 4: GDP GROWTH RATE DISTRIBUTION BY CONTINENT (LDCs vs Non-LDCs)
 # ----------------------------------------------------------------------------
 
-cat("Creating Figure 4: COVID-19 Impact...\n")
+cat("Creating Figure 4: GDP Growth Rate Distribution...\n")
 
-covid_impact <- analysis_period %>%
-  filter(is_ldc == TRUE) %>%
-  mutate(period = case_when(
-    year >= 2015 & year <= 2019 ~ "Pre-COVID\n(2015-2019)",
-    year >= 2020 & year <= 2023 ~ "COVID Era\n(2020-2023)"
-  )) %>%
-  filter(!is.na(period), !is.na(continent)) %>%
-  group_by(continent, period) %>%
-  summarise(avg_growth = mean(gdp_growth_rate, na.rm = TRUE), .groups = "drop")
+growth_box <- analysis_period %>%
+  filter(!is.na(gdp_growth_rate), !is.na(continent), !is.na(is_ldc)) %>%
+  mutate(group_label = ifelse(is_ldc, "LDCs", "Non-LDCs"))
 
-fig4 <- ggplot(covid_impact, aes(x = continent, y = avg_growth, fill = period)) +
-  geom_bar(stat = "identity", position = "dodge", width = 0.7) +
+fig6 <- ggplot(growth_box, aes(x = continent, y = gdp_growth_rate, fill = group_label)) +
+  geom_boxplot(outlier.alpha = 0.3, width = 0.6,
+               position = position_dodge(width = 0.7)) +
   geom_hline(yintercept = 7, linetype = "dashed", color = "red", linewidth = 1) +
-  geom_text(aes(label = paste0(round(avg_growth, 1), "%")),
-            position = position_dodge(width = 0.7), vjust = -0.5, size = 3.5) +
   labs(
-    title = "Figure 4: Impact of COVID-19 on LDC Growth Rates",
-    subtitle = "Comparison before and during pandemic | Red line: 7% target",
-    x = "Continent", y = "Average GDP Growth Rate (%)",
-    fill = "Period"
+    title = "Figure 4: GDP Per Capita Growth by Continent and Development Status",
+    subtitle = "Distribution of GDP per capita growth rates (2015-2023) | 7% target shown in red",
+    x = "Continent",
+    y = "GDP Growth Rate (%)",
+    fill = "Country Group"
   ) +
-  scale_fill_manual(values = c("Pre-COVID\n(2015-2019)" = "#3498db", 
-                               "COVID Era\n(2020-2023)" = "#e74c3c")) +
+  scale_fill_manual(values = c("LDCs" = "#e74c3c", "Non-LDCs" = "#3498db")) +
   theme_minimal() +
   theme(plot.title = element_text(face = "bold", size = 14),
         plot.subtitle = element_text(size = 10),
         legend.position = "bottom",
-        axis.text.x = element_text(angle = 45, hjust = 1))
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        strip.text = element_text(face = "bold")) +
+  coord_cartesian(ylim = c(-10, 10))   # 限制在 -10% ~ 10%
 
-ggsave("figure4_covid_impact.png", fig4, width = 10, height = 7, dpi = 300)
-cat("  ✓ Saved: figure4_covid_impact.png\n\n")
+ggsave("figure4_gdpgrowth_boxplot.png", fig6, width = 10, height = 7, dpi = 300)
+cat("  ✓ Saved: figure4_gdpgrowth_boxplot.png\n\n")
 
 # ----------------------------------------------------------------------------
 # FIGURE 5: SDI vs GDP GROWTH
@@ -255,6 +251,7 @@ ggsave("figure5_sdi_vs_growth.png", fig5, width = 14, height = 10, dpi = 300)
 cat("  ✓ Saved: figure5_sdi_vs_growth.png\n\n")
 
 cat("  ✓ Saved: figure5_sdi_vs_growth.png\n\n")
+
 
 
 
