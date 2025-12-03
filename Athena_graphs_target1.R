@@ -73,9 +73,9 @@ cat("  Observations with growth data:", nrow(analysis_period), "\n\n")
 cat("Step 3: Creating figures...\n\n")
 
 # ----------------------------------------------------------------------------
-# FIGURE 1: GDP GROWTH TRENDS (with COVID-19 highlight)
+# FIGURE 1: GDP GROWTH TRENDS BY CONTINENT
 # ----------------------------------------------------------------------------
-cat("Creating Figure 1: GDP Growth Trends...\n")
+cat("Creating Figure 1: GDP Growth Trends by Continent...\n")
 
 growth_trends <- analysis_period %>%
   filter(!is.na(continent), !is.na(is_ldc)) %>%
@@ -85,7 +85,7 @@ growth_trends <- analysis_period %>%
 
 fig1 <- ggplot(growth_trends, aes(x = year, y = avg_growth, 
                                   color = group_label, linetype = group_label)) +
-  # COVID-19 period highlight (2019-2020) - 經濟大幅下降期
+  # COVID-19 period highlight (2019-2020)
   annotate("rect", 
            xmin = 2019, xmax = 2020, 
            ymin = -Inf, ymax = Inf,
@@ -113,7 +113,7 @@ fig1 <- ggplot(growth_trends, aes(x = year, y = avg_growth,
   
   labs(
     title = "Figure 1: GDP Per Capita Growth Rates by Continent",
-    subtitle = "LDCs vs Non-LDCs (2015-2023) | Red line indicates 7% annual growth target",
+    subtitle = "LDCs vs Non-LDCs (2015-2023) | Red line: 7% target",
     x = "Year", 
     y = "Average GDP Growth Rate (%)",
     color = "Country Group", 
@@ -132,53 +132,52 @@ fig1 <- ggplot(growth_trends, aes(x = year, y = avg_growth,
 
 ggsave("figure1_growth_trends.png", fig1, width = 14, height = 10, dpi = 300)
 cat("  ✓ Saved: figure1_growth_trends.png\n\n")
+
 # ----------------------------------------------------------------------------
-# FIGURE 2: TARGET ACHIEVEMENT
+# FIGURE 2: GROWTH DISTRIBUTION BY CONTINENT
 # ----------------------------------------------------------------------------
 
-cat("Creating Figure 2: Target Achievement...\n")
+cat("Creating Figure 2: Growth Distribution by Continent...\n")
 
-target_achievement <- analysis_period %>%
-  filter(!is.na(continent), is_ldc == TRUE) %>%
-  group_by(continent) %>%
-  summarise(
-    total_obs = n(),
-    above_7pct = sum(gdp_growth_rate >= 7, na.rm = TRUE),
-    pct_achieving = (above_7pct / total_obs) * 100,
-    .groups = "drop"
-  )
+growth_box <- analysis_period %>%
+  filter(!is.na(gdp_growth_rate), !is.na(continent), !is.na(is_ldc)) %>%
+  mutate(group_label = ifelse(is_ldc, "LDCs", "Non-LDCs"))
 
-fig2 <- ggplot(target_achievement, aes(x = reorder(continent, pct_achieving), 
-                                       y = pct_achieving, fill = continent)) +
-  geom_bar(stat = "identity", width = 0.7, show.legend = FALSE) +
-  geom_text(aes(label = paste0(round(pct_achieving, 1), "%\n(", 
-                               above_7pct, "/", total_obs, ")")),
-            hjust = -0.1, size = 3.5) +
-  coord_flip() +
+fig2 <- ggplot(growth_box, aes(x = continent, y = gdp_growth_rate, fill = group_label)) +
+  geom_boxplot(outlier.alpha = 0.3, width = 0.6,
+               position = position_dodge(width = 0.7)) +
+  geom_hline(yintercept = 7, linetype = "dashed", color = "red", linewidth = 1) +
   labs(
-    title = "Figure 2: Percentage of LDCs Achieving 7% Growth Target",
-    subtitle = "By Continent (2015-2023) | Numbers show: percentage (observations ≥7% / total)",
-    x = NULL, y = "Percentage Achieving ≥7% Growth (%)"
+    title = "Figure 2: Distribution of GDP Growth by Continent",
+    subtitle = "LDCs vs Non-LDCs (2015-2023) | Red line: 7% target",
+    x = "Continent",
+    y = "GDP Growth Rate (%)",
+    fill = "Country Group"
   ) +
-  scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +
-  scale_fill_brewer(palette = "Set2") +
+  scale_fill_manual(values = c("LDCs" = "#e74c3c", "Non-LDCs" = "#3498db")) +
   theme_minimal() +
   theme(plot.title = element_text(face = "bold", size = 14),
-        plot.subtitle = element_text(size = 10))
+        plot.subtitle = element_text(size = 10),
+        legend.position = "bottom",
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        strip.text = element_text(face = "bold")) +
+  coord_cartesian(ylim = c(-10, 10))   
 
-ggsave("figure2_target_achievement.png", fig2, width = 10, height = 6, dpi = 300)
-cat("  ✓ Saved: figure2_target_achievement.png\n\n")
+ggsave("figure2_growth_distribution.png", fig2, width = 10, height = 7, dpi = 300)
+cat("  ✓ Saved: figure2_growth_distribution.png\n\n")
 
 # ----------------------------------------------------------------------------
 # FIGURE 3: SHARE OF LDCs ACHIEVING 7% TARGET 
 # ----------------------------------------------------------------------------
 cat("Creating Figure 3: Share of LDCs Achieving Target...\n")
 
+
 ldc_count_by_continent <- analysis_period %>%
   filter(is_ldc == TRUE) %>%
   distinct(code, continent) %>%
   group_by(continent) %>%
   summarise(n_ldcs = n_distinct(code), .groups = "drop")
+
 
 target_achievement <- analysis_period %>%
   filter(!is.na(continent), is_ldc == TRUE) %>%
@@ -196,6 +195,7 @@ fig3 <- ggplot(target_achievement,
                    y = pct_achieving, 
                    fill = continent)) +
   geom_bar(stat = "identity", width = 0.7, show.legend = FALSE) +
+  
   
   geom_text(aes(label = paste0(
     round(pct_achieving, 1), "%\n",
@@ -222,45 +222,50 @@ fig3 <- ggplot(target_achievement,
 
 ggsave("figure3_target_achievement.png", fig3, width = 10, height = 6, dpi = 300)
 cat("  ✓ Saved: figure3_target_achievement.png\n\n")
-
-# ----------------------------------------------------------------------------
-# ----------------------------------------------------------------------------
-# FIGURE 4: GDP GROWTH RATE DISTRIBUTION BY CONTINENT (LDCs vs Non-LDCs)
+# FIGURE 4: BEST AND WORST PERFORMING LDCs
 # ----------------------------------------------------------------------------
 
-cat("Creating Figure 4: GDP Growth Rate Distribution...\n")
+cat("Creating Figure 4: Best and Worst Performing LDCs...\n")
 
-growth_box <- analysis_period %>%
-  filter(!is.na(gdp_growth_rate), !is.na(continent), !is.na(is_ldc)) %>%
-  mutate(group_label = ifelse(is_ldc, "LDCs", "Non-LDCs"))
+ldc_performance <- analysis_period %>%
+  filter(is_ldc == TRUE) %>%
+  group_by(country, code, continent) %>%
+  summarise(avg_growth = mean(gdp_growth_rate, na.rm = TRUE),
+            n_years = n(), .groups = "drop") %>%
+  filter(n_years >= 3)
 
-fig6 <- ggplot(growth_box, aes(x = continent, y = gdp_growth_rate, fill = group_label)) +
-  geom_boxplot(outlier.alpha = 0.3, width = 0.6,
-               position = position_dodge(width = 0.7)) +
-  geom_hline(yintercept = 7, linetype = "dashed", color = "red", linewidth = 1) +
+top_5 <- ldc_performance %>% arrange(desc(avg_growth)) %>% 
+  head(5) %>% mutate(performance = "Top 5 Performers")
+bottom_5 <- ldc_performance %>% arrange(avg_growth) %>% 
+  head(5) %>% mutate(performance = "Bottom 5 Performers")
+
+performers <- bind_rows(top_5, bottom_5)
+
+fig4 <- ggplot(performers, aes(x = avg_growth, y = reorder(country, avg_growth),
+                               fill = continent)) +
+  geom_bar(stat = "identity", width = 0.7) +
+  geom_vline(xintercept = 7, linetype = "dashed", color = "red", linewidth = 1) +
+  facet_wrap(~performance, scales = "free_y", ncol = 1) +
   labs(
-    title = "Figure 4: GDP Per Capita Growth by Continent and Development Status",
-    subtitle = "Distribution of GDP per capita growth rates (2015-2023) | 7% target shown in red",
-    x = "Continent",
-    y = "GDP Growth Rate (%)",
-    fill = "Country Group"
+    title = "Figure 4: Best and Worst Performing LDCs",
+    subtitle = "Average GDP Growth (2015-2023) | Red line: 7% target",
+    x = "Average Annual GDP Growth Rate (%)", y = NULL,
+    fill = "Continent"
   ) +
-  scale_fill_manual(values = c("LDCs" = "#e74c3c", "Non-LDCs" = "#3498db")) +
+  scale_fill_brewer(palette = "Set2") +
   theme_minimal() +
   theme(plot.title = element_text(face = "bold", size = 14),
         plot.subtitle = element_text(size = 10),
-        legend.position = "bottom",
-        axis.text.x = element_text(angle = 45, hjust = 1),
-        strip.text = element_text(face = "bold")) +
-  coord_cartesian(ylim = c(-10, 10))   
+        strip.text = element_text(face = "bold", size = 11))
 
-ggsave("figure4_gdpgrowth_boxplot.png", fig6, width = 10, height = 7, dpi = 300)
-cat("  ✓ Saved: figure4_gdpgrowth_boxplot.png\n\n")
+ggsave("figure4_performers.png", fig4, width = 12, height = 10, dpi = 300)
+cat("  ✓ Saved: figure4_performers.png\n\n")
 
 # ----------------------------------------------------------------------------
-# FIGURE 5: SDI vs GDP GROWTH
+# FIGURE 5: SUSTAINABLE DEVELOPMENT vs ECONOMIC GROWTH
 # ----------------------------------------------------------------------------
-cat("Creating Figure 5: SDI vs GDP Growth...\n")
+
+cat("Creating Figure 5: Sustainable Development vs Growth...\n")
 
 sdi_growth <- analysis_period %>%
   filter(!is.na(sdi_score), !is.na(continent)) %>%
@@ -274,7 +279,7 @@ fig5 <- ggplot(sdi_growth, aes(x = sdi_score, y = gdp_growth_rate,
   facet_wrap(~continent, ncol = 3) +
   labs(
     title = "Figure 5: Sustainable Development vs Economic Growth",
-    subtitle = "SDI Score vs GDP Growth Rate (2015-2023) | Red line: 7% target",
+    subtitle = "SDI Score vs GDP Growth (2015-2023) | Red line: 7% target",
     x = "Sustainable Development Index (Higher = More Sustainable)",
     y = "GDP Growth Rate (%)",
     color = "Country Group"
@@ -289,7 +294,7 @@ fig5 <- ggplot(sdi_growth, aes(x = sdi_score, y = gdp_growth_rate,
 ggsave("figure5_sdi_vs_growth.png", fig5, width = 14, height = 10, dpi = 300)
 cat("  ✓ Saved: figure5_sdi_vs_growth.png\n\n")
 
-cat("  ✓ Saved: figure5_sdi_vs_growth.png\n\n")
+
 
 
 
