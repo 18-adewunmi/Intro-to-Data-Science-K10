@@ -1,15 +1,6 @@
 # ============================================================================
 # TARGET 1: FIGURES FOR REPORT 
 # UN SDG 8.1 - GDP Growth in Least Developed Countries
-# ============================================================================
-#
-# INSTRUCTIONS:
-# 1. Run the data cleaning script (merge_clean_ids_project.R) first
-# 2. This will generate master_dataset.csv in your working directory
-# 3. Then run this script to generate all 5 figures
-# 4. Figures will be saved in the same directory
-#
-# ============================================================================
 
 # Clear environment
 rm(list = ls())
@@ -73,15 +64,16 @@ cat("  Observations with growth data:", nrow(analysis_period), "\n\n")
 cat("Step 3: Creating figures...\n\n")
 
 # ----------------------------------------------------------------------------
-# ----------------------------------------------------------------------------
 # FIGURE 1: GDP GROWTH TRENDS BY CONTINENT
 # ----------------------------------------------------------------------------
 cat("Creating Figure 1: GDP Growth Trends by Continent...\n")
+
 growth_trends <- analysis_period %>%
   filter(!is.na(continent), !is.na(is_ldc)) %>%
   group_by(continent, is_ldc, year) %>%
   summarise(avg_growth = mean(gdp_growth_rate, na.rm = TRUE), .groups = "drop") %>%
   mutate(group_label = ifelse(is_ldc, "LDCs", "Non-LDCs"))
+
 fig1 <- ggplot(growth_trends, aes(x = year, y = avg_growth, 
                                   color = group_label, linetype = group_label)) +
   # COVID-19 period highlight (2019-2020)
@@ -89,7 +81,7 @@ fig1 <- ggplot(growth_trends, aes(x = year, y = avg_growth,
            xmin = 2019, xmax = 2020, 
            ymin = -Inf, ymax = Inf,
            fill = "gray", alpha = 0.15) +
-
+  
   # COVID label
   annotate("text", 
            x = 2019.5, y = Inf, 
@@ -98,18 +90,18 @@ fig1 <- ggplot(growth_trends, aes(x = year, y = avg_growth,
            size = 3, 
            vjust = 1.5, 
            fontface = "italic") +
-
+  
   # Main lines
   geom_line(linewidth = 1.2) +
   geom_point(size = 2.5) +
-
+  
   # 7% target line
   geom_hline(yintercept = 7, linetype = "dashed", color = "red", linewidth = 1) +
   annotate("text", x = 2015.5, y = 7.5, label = "7% Target", 
            color = "red", size = 3.5, hjust = 0) +
-
+  
   facet_wrap(~continent, ncol = 3) +
-
+  
   labs(
     title = "Figure 1: GDP Per Capita Growth Rates by Continent",
     subtitle = "LDCs vs Non-LDCs (2015-2023) | Red line: 7% target",
@@ -118,11 +110,9 @@ fig1 <- ggplot(growth_trends, aes(x = year, y = avg_growth,
     color = "Country Group", 
     linetype = "Country Group"
   ) +
-
-  scale_color_manual(values = c("LDCs" = "
-#e74c3c", "Non-LDCs" = "
-#3498db")) +
-
+  
+  scale_color_manual(values = c("LDCs" = "#e74c3c", "Non-LDCs" = "#3498db")) +
+  
   theme_minimal() +
   theme(
     plot.title = element_text(face = "bold", size = 14),
@@ -130,8 +120,10 @@ fig1 <- ggplot(growth_trends, aes(x = year, y = avg_growth,
     legend.position = "bottom", 
     strip.text = element_text(face = "bold")
   )
+
 ggsave("figure1_growth_trends.png", fig1, width = 14, height = 10, dpi = 300)
 cat("  ✓ Saved: figure1_growth_trends.png\n\n")
+
 # ----------------------------------------------------------------------------
 # FIGURE 2: GROWTH DISTRIBUTION BY CONTINENT
 # ----------------------------------------------------------------------------
@@ -223,7 +215,7 @@ ggsave("figure3_target_achievement.png", fig3, width = 10, height = 6, dpi = 300
 cat("  ✓ Saved: figure3_target_achievement.png\n\n")
 
 # ----------------------------------------------------------------------------
-# FIGURE 4: SUSTAINABLE DEVELOPMENT vs ECONOMIC GROWTH
+# FIGURE 5: SUSTAINABLE DEVELOPMENT vs ECONOMIC GROWTH
 # ----------------------------------------------------------------------------
 
 cat("Creating Figure 4: Sustainable Development vs Growth...\n")
@@ -254,6 +246,8 @@ fig5 <- ggplot(sdi_growth, aes(x = sdi_score, y = gdp_growth_rate,
 
 ggsave("figure4_sdi_vs_growth.png", fig5, width = 14, height = 10, dpi = 300)
 cat("  ✓ Saved: figure4_sdi_vs_growth.png\n\n")
+
+
 
 
 
