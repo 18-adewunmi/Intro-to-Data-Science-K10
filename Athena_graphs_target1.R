@@ -222,50 +222,12 @@ fig3 <- ggplot(target_achievement,
 
 ggsave("figure3_target_achievement.png", fig3, width = 10, height = 6, dpi = 300)
 cat("  ✓ Saved: figure3_target_achievement.png\n\n")
-# FIGURE 4: BEST AND WORST PERFORMING LDCs
-# ----------------------------------------------------------------------------
-
-cat("Creating Figure 4: Best and Worst Performing LDCs...\n")
-
-ldc_performance <- analysis_period %>%
-  filter(is_ldc == TRUE) %>%
-  group_by(country, code, continent) %>%
-  summarise(avg_growth = mean(gdp_growth_rate, na.rm = TRUE),
-            n_years = n(), .groups = "drop") %>%
-  filter(n_years >= 3)
-
-top_5 <- ldc_performance %>% arrange(desc(avg_growth)) %>% 
-  head(5) %>% mutate(performance = "Top 5 Performers")
-bottom_5 <- ldc_performance %>% arrange(avg_growth) %>% 
-  head(5) %>% mutate(performance = "Bottom 5 Performers")
-
-performers <- bind_rows(top_5, bottom_5)
-
-fig4 <- ggplot(performers, aes(x = avg_growth, y = reorder(country, avg_growth),
-                               fill = continent)) +
-  geom_bar(stat = "identity", width = 0.7) +
-  geom_vline(xintercept = 7, linetype = "dashed", color = "red", linewidth = 1) +
-  facet_wrap(~performance, scales = "free_y", ncol = 1) +
-  labs(
-    title = "Figure 4: Best and Worst Performing LDCs",
-    subtitle = "Average GDP Growth (2015-2023) | Red line: 7% target",
-    x = "Average Annual GDP Growth Rate (%)", y = NULL,
-    fill = "Continent"
-  ) +
-  scale_fill_brewer(palette = "Set2") +
-  theme_minimal() +
-  theme(plot.title = element_text(face = "bold", size = 14),
-        plot.subtitle = element_text(size = 10),
-        strip.text = element_text(face = "bold", size = 11))
-
-ggsave("figure4_performers.png", fig4, width = 12, height = 10, dpi = 300)
-cat("  ✓ Saved: figure4_performers.png\n\n")
 
 # ----------------------------------------------------------------------------
-# FIGURE 5: SUSTAINABLE DEVELOPMENT vs ECONOMIC GROWTH
+# FIGURE 4: SUSTAINABLE DEVELOPMENT vs ECONOMIC GROWTH
 # ----------------------------------------------------------------------------
 
-cat("Creating Figure 5: Sustainable Development vs Growth...\n")
+cat("Creating Figure 4: Sustainable Development vs Growth...\n")
 
 sdi_growth <- analysis_period %>%
   filter(!is.na(sdi_score), !is.na(continent)) %>%
@@ -278,7 +240,7 @@ fig5 <- ggplot(sdi_growth, aes(x = sdi_score, y = gdp_growth_rate,
   geom_hline(yintercept = 7, linetype = "dashed", color = "red", linewidth = 1) +
   facet_wrap(~continent, ncol = 3) +
   labs(
-    title = "Figure 5: Sustainable Development vs Economic Growth",
+    title = "Figure 4: Sustainable Development vs Economic Growth",
     subtitle = "SDI Score vs GDP Growth (2015-2023) | Red line: 7% target",
     x = "Sustainable Development Index (Higher = More Sustainable)",
     y = "GDP Growth Rate (%)",
@@ -291,8 +253,9 @@ fig5 <- ggplot(sdi_growth, aes(x = sdi_score, y = gdp_growth_rate,
         legend.position = "bottom", strip.text = element_text(face = "bold")) +
   coord_cartesian(ylim = c(-10, 10))  
 
-ggsave("figure5_sdi_vs_growth.png", fig5, width = 14, height = 10, dpi = 300)
-cat("  ✓ Saved: figure5_sdi_vs_growth.png\n\n")
+ggsave("figure4_sdi_vs_growth.png", fig5, width = 14, height = 10, dpi = 300)
+cat("  ✓ Saved: figure4_sdi_vs_growth.png\n\n")
+
 
 
 
