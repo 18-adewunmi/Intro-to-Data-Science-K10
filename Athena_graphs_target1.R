@@ -272,25 +272,8 @@ fig4 <- ggplot(sdi_growth, aes(x = sdi_score, y = gdp_growth_rate,
 ggsave("figure4_sdi_vs_growth.png", fig4, width = 14, height = 10, dpi = 300)
 cat("  ✓ Saved: figure4_sdi_vs_growth.png\n\n")
 
-# ============================================================================
-# SUMMARY
-# ============================================================================
 
-cat("============================================================================\n")
-cat("                    ALL FIGURES CREATED SUCCESSFULLY!                       \n")
-cat("============================================================================\n\n")
 
-cat("Files created:\n")
-cat("  1. figure1_growth_trends.png (Time series by continent)\n")
-cat("  2. figure2_growth_distribution.png (Boxplots by continent)\n")
-cat("  3. figure3_target_achievement.png (% achieving 7% target)\n")
-cat("  4. figure4_sdi_vs_growth.png (SDI vs Growth)\n\n")
-
-cat("Analysis period:", year_label, "\n")
-cat("Method: LDCs use simple average; Non-LDCs use population-weighted average\n\n")
-
-cat("Note: All figures use the automatically detected year range from your data.\n")
-cat("If you update your data with more recent years, the figures will automatically adjust.\n\n")
 
 
 
