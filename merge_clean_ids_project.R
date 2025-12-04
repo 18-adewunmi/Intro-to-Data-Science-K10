@@ -1,31 +1,11 @@
 # ============================================================================
 # Introduction to Data Science - Group Assignment
-# Data Cleaning and Merging (Including LDC Classification and SDI)
-# ============================================================================
-# 
-# Instructions for running this script:
-# 1. Ensure all CSV files are in the same directory as this R script
-# 2. Files needed:
-#    - gdp-per-capita-worldbank.csv
-#    - youth-not-in-education-employment-training.csv
-#    - continents-according-to-our-world-in-data.csv
-#    - government_expenditure_on_education.csv
-#    - ldc_data.csv (UN LDC classification)
-#    - sustainable_development_index.csv (SDI data)
-# 3. In RStudio: Session > Set Working Directory > To Source File Location
-# 4. Run this script
-#
-# ============================================================================
+# Data Cleaning and Merging 
 
 # Load required packages
 library(tidyverse)
 library(dplyr)
 library(readr)
-
-cat("\n")
-cat("============================================================================\n")
-cat("              DATA CLEANING AND MERGING - COMPLETE VERSION                  \n")
-cat("============================================================================\n\n")
 
 # ============================================================================
 # PART 1: Load Data
@@ -42,13 +22,15 @@ continent <- read_csv("continents-according-to-our-world-in-data.csv")
 edu_raw <- read_csv("government_expenditure_on_education.csv", skip = 4)
 ldc_data <- read_csv("ldc_data.csv")
 sdi_data <- read_csv("sustainable_development_index.csv")
+population_raw <- read_csv("population_data.csv")
 
 cat("GDP data:", nrow(gdp), "rows\n")
 cat("NEET data:", nrow(neet), "rows\n")
 cat("Continent data:", nrow(continent), "rows\n")
 cat("Education data:", nrow(edu_raw), "rows\n")
 cat("LDC classification:", nrow(ldc_data), "rows\n")
-cat("SDI data:", nrow(sdi_data), "rows\n\n")
+cat("SDI data:", nrow(sdi_data), "rows\n")
+cat("Population data:", nrow(population_raw), "rows\n\n")
 
 # ============================================================================
 # PART 2: Data Cleaning and Renaming
@@ -101,7 +83,6 @@ edu_long <- edu_raw %>%
   distinct(code, year, .keep_all = TRUE)
 
 # Clean LDC classification data
-# Based on your Excel structure: CCODE, ISO -3, Countries, Status
 ldc_clean <- ldc_data %>%
   rename(
     ccode = CCODE,
@@ -110,7 +91,7 @@ ldc_clean <- ldc_data %>%
     ldc_status = Status
   ) %>%
   mutate(
-    code = iso3,  # Use ISO3 code to match with other datasets
+    code = iso3,
     ldc_status = toupper(trimws(ldc_status)),
     is_ldc = ldc_status == "LDC"
   ) %>%
@@ -121,13 +102,11 @@ cat("LDC classification cleaned\n")
 cat("  - LDC countries:", sum(ldc_clean$is_ldc), "\n")
 cat("  - ODC/Other countries:", sum(!ldc_clean$is_ldc), "\n\n")
 
-# Clean SDI data (Sustainable Development Index)
-# SDI file structure: iso, country, 1990, 1991, ..., 2022
+# Clean SDI data
 sdi_clean <- sdi_data %>%
   rename(code = iso) %>%
-  # Convert from wide to long format (years as columns -> years as rows)
   pivot_longer(
-    cols = matches("^\\d{4}$"),  # Select all year columns (1990, 1991, etc.)
+    cols = matches("^\\d{4}$"),
     names_to = "year",
     values_to = "sdi_score"
   ) %>%
@@ -135,9 +114,7 @@ sdi_clean <- sdi_data %>%
     year = as.integer(year),
     sdi_score = as.numeric(sdi_score)
   ) %>%
-  # Filter: only keep data from 2000 onwards and non-missing SDI scores
   filter(!is.na(sdi_score), year >= 2000) %>%
-  # Keep only necessary columns
   select(code, year, sdi_score) %>%
   distinct(code, year, .keep_all = TRUE)
 
@@ -146,7 +123,80 @@ cat("  - Year range:", min(sdi_clean$year, na.rm = TRUE), "to",
     max(sdi_clean$year, na.rm = TRUE), "\n")
 cat("  - Countries:", n_distinct(sdi_clean$code), "\n\n")
 
-cat("=== Data cleaned successfully ===\n\n")
+# ============================================================================
+# Clean Population data - WORLD BANK WIDE FORMAT
+# ============================================================================
+
+cat("Cleaning population data (World Bank format)...\n")
+
+# Read with skip to handle metadata rows
+pop_raw <- read_csv("population_data.csv", skip = 4, show_col_types = FALSE)
+
+cat("Original data:", nrow(pop_raw), "rows,", ncol(pop_raw), "columns\n")
+
+# World Bank format typically has:
+# Country Name | Country Code | Indicator Name | Indicator Code | 1960 | 1961 | ...
+
+# Find the country code column (usually 2nd column)
+code_col_idx <- 2
+
+# Find year columns (4-digit numbers)
+all_cols <- colnames(pop_raw)
+year_cols <- all_cols[grepl("^[12][0-9]{3}$", all_cols)]
+
+if(length(year_cols) == 0) {
+  cat("Warning: No year columns found with 4-digit pattern.\n")
+  cat("Trying to detect year columns by position (columns 5 onwards)...\n")
+  # Assume years start from column 5
+  year_cols <- colnames(pop_raw)[5:ncol(pop_raw)]
+  # Filter to only numeric columns
+  year_cols <- year_cols[sapply(pop_raw[year_cols], is.numeric)]
+}
+
+cat("Found", length(year_cols), "year columns\n")
+cat("Year range:", head(year_cols, 1), "to", tail(year_cols, 1), "\n")
+
+# Convert to long format
+population_clean <- pop_raw %>%
+  # Select country code + all year columns
+  select(code = all_of(code_col_idx), all_of(year_cols)) %>%
+  # Convert to long format
+  pivot_longer(
+    cols = all_of(year_cols),
+    names_to = "year",
+    values_to = "population"
+  ) %>%
+  # Clean data types
+  mutate(
+    code = as.character(code),
+    year = as.integer(year),
+    population = as.numeric(population)
+  ) %>%
+  # Remove missing values
+  filter(!is.na(code), !is.na(year), !is.na(population)) %>%
+  # Remove duplicates
+  distinct(code, year, .keep_all = TRUE)
+
+# Verify success
+if(nrow(population_clean) == 0) {
+  cat("\n❌ ERROR: Cleaning produced 0 rows!\n")
+  cat("Sample of original data:\n")
+  print(head(pop_raw[, 1:5], 3))
+  stop("Population cleaning failed")
+}
+
+year_min <- min(population_clean$year, na.rm = TRUE)
+year_max <- max(population_clean$year, na.rm = TRUE)
+
+if(is.infinite(year_min)) {
+  cat("\n❌ ERROR: Year conversion failed\n")
+  stop("Could not extract years from column names")
+}
+
+cat("✓ Population data cleaned\n")
+cat("  Year range:", year_min, "to", year_max, "\n")
+cat("  Countries:", n_distinct(population_clean$code), "\n")
+cat("  Total observations:", nrow(population_clean), "\n\n")
 
 # ============================================================================
 # PART 3: Merge All Datasets
@@ -167,7 +217,7 @@ master_data <- gdp_clean %>%
     edu_long, 
     by = c("code", "year")
   ) %>%
-  # Step 3: Merge LDC classification (by code only, as status doesn't change by year)
+  # Step 3: Merge LDC classification (by code only)
   left_join(
     ldc_clean,
     by = "code"
@@ -177,7 +227,12 @@ master_data <- gdp_clean %>%
     sdi_clean,
     by = c("code", "year")
   ) %>%
-  # Step 5: Merge continent classification
+  # Step 5: Merge Population data (NEW!)
+  left_join(
+    population_clean,
+    by = c("code", "year")
+  ) %>%
+  # Step 6: Merge continent classification
   left_join(
     continent_clean, 
     by = "code"
@@ -192,10 +247,12 @@ master_data <- gdp_clean %>%
   select(
     # Identifiers
     country, code, year, continent,
-    # Development status (NEW!)
+    # Development status
     ldc_status, is_ldc,
     # Economic indicators
     gdp_per_capita, 
+    # Population (NEW!)
+    population,
     # Employment/Education indicators
     neet_share, edu_expenditure_gdp,
     # Sustainability indicator
@@ -203,7 +260,7 @@ master_data <- gdp_clean %>%
   ) %>%
   # Keep observations with at least one piece of data
   filter(!is.na(gdp_per_capita) | !is.na(neet_share) | 
-           !is.na(edu_expenditure_gdp) | !is.na(sdi_score)) %>%
+           !is.na(edu_expenditure_gdp) | !is.na(sdi_score) | !is.na(population)) %>%
   # Keep only data with continent classification
   filter(!is.na(continent))
 
@@ -241,6 +298,7 @@ data_coverage <- master_data %>%
     neet_coverage = round(sum(!is.na(neet_share)) / n() * 100, 1),
     edu_coverage = round(sum(!is.na(edu_expenditure_gdp)) / n() * 100, 1),
     sdi_coverage = round(sum(!is.na(sdi_score)) / n() * 100, 1),
+    pop_coverage = round(sum(!is.na(population)) / n() * 100, 1),  # NEW!
     .groups = "drop"
   )
 print(data_coverage)
@@ -254,9 +312,21 @@ master_data %>%
     neet_missing = sum(is.na(neet_share)),
     edu_missing = sum(is.na(edu_expenditure_gdp)),
     sdi_missing = sum(is.na(sdi_score)),
+    pop_missing = sum(is.na(population)),  # NEW!
     ldc_unknown = sum(ldc_status == "UNKNOWN")
   ) %>%
   print()
+
+# Check population coverage for LDCs (important for weighted analysis)
+cat("\n--- Population Coverage for LDCs ---\n")
+ldc_pop_check <- master_data %>%
+  filter(is_ldc == TRUE, year >= 2015, year <= 2023) %>%
+  summarise(
+    total_obs = n(),
+    pop_available = sum(!is.na(population)),
+    pop_coverage_pct = round(pop_available / total_obs * 100, 1)
+  )
+print(ldc_pop_check)
 
 # ============================================================================
 # PART 5: Save Cleaned Data
@@ -271,18 +341,22 @@ cat("✓ Saved: master_dataset.csv\n")
 # Save a summary for reference
 summary_stats <- data.frame(
   Dataset = c("Total Observations", "Unique Countries", "Year Range", 
-              "LDC Countries", "Non-LDC Countries", "Continents"),
+              "LDC Countries", "Non-LDC Countries", "Continents",
+              "Population Coverage (%)"),
   Value = c(
     nrow(master_data),
     n_distinct(master_data$code),
     paste(min(master_data$year), "-", max(master_data$year)),
     sum(master_data %>% distinct(code, .keep_all = TRUE) %>% pull(is_ldc)),
     sum(!(master_data %>% distinct(code, .keep_all = TRUE) %>% pull(is_ldc))),
-    n_distinct(master_data$continent)
+    n_distinct(master_data$continent),
+    round(sum(!is.na(master_data$population)) / nrow(master_data) * 100, 1)
   )
 )
 
 write_csv(summary_stats, "data_summary.csv")
 cat("✓ Saved: data_summary.csv\n\n")
+
+
 
 
