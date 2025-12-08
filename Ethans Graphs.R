@@ -10,6 +10,13 @@ view(master)
 library(tidyr)
 
 # 4. GDP per capita growth rate (%) over time by continent
+cont_master <- master %>% group_by(continent, year) %>%
+  mutate(gdp_per_capita = mean(gdp_per_capita, na.rm = T),
+    neet_share = mean(neet_share, na.rm = T),
+    du_expenditure_gdp = mean(edu_expenditure_gdp, na.rm = T),
+  ) %>%
+  ungroup() %>% select(year:edu_expenditure_gdp) %>%
+  distinct(year, continent, .keep_all = T)
 cont_master <- cont_master %>%
   group_by(continent) %>%
   arrange(year) %>%
@@ -148,3 +155,4 @@ ggplot(gdp_growth_data, aes(year, avg_growth_rate, colour = continent)) +
   geom_hline(yintercept = 0, linetype = "dashed", colour = "black", alpha = 0.5) +
   labs(x = 'Year', y = 'Average GDP per Capita Growth Rate (%)', colour = 'Continent',
        title = 'GDP per Capita Growth Rate Trends by Continent')
+
